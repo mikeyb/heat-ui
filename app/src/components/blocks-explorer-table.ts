@@ -72,6 +72,12 @@
       <th md-column md-numeric>
         <span>Fee</span>
       </th>
+      <th md-column md-numeric>
+        <span>POS Reward</span>
+      </th>
+      <th md-column md-numeric>
+        <span>POP Reward</span>
+      </th>
     `,`
       <td md-cell md-numeric nowrap>
         <span>{{item.height}}</span>
@@ -89,44 +95,47 @@
         <span>{{item.numberOfTransactions}}</span>
       </td>
       <td md-cell md-numeric nowrap>
-        <money precision="8" amount="item.totalAmountNQT" symbol="'HEAT'" fraction="2"></money>
+        <money precision="8" amount="item.totalAmountHQT" symbol="'HEAT'" fraction="2"></money>
       </td>
       <td md-cell md-numeric nowrap>
-        <money precision="8" amount="item.totalFeeNQT" symbol="'HEAT'" fraction="2"></money>
+        <money precision="8" amount="item.totalFeeHQT" symbol="'HEAT'" fraction="2"></money>
+      </td>
+      <td md-cell md-numeric nowrap>
+        <money precision="8" amount="item.posRewardHQT" symbol="'HEAT'" fraction="2"></money>
+      </td>
+      <td md-cell md-numeric nowrap>
+        <money precision="8" amount="item.popRewardHQT" symbol="'HEAT'" fraction="2"></money>
       </td>
     `
   )
 })
-@Inject('$scope','$q','$timeout','user','engine','$interval')
+@Inject('$scope','$q','$timeout','user','heat','HTTPNotify')
 class BlockExplorerTableComponent extends AbstractDataTableComponent {
 
   constructor($scope: angular.IScope,
               $q: angular.IQService,
               $timeout: angular.ITimeoutService,
               private user: UserService,
-              private engine: EngineService,
-              private $interval: angular.IIntervalService) {
+              private heat: HeatService,
+              private HTTPNotify: HTTPNotifyService) {
     super($scope, $q, $timeout, "-timestamp");
     this.query =  {
       order: '-timestamp',
-      limit: 10,
+      limit: 50,
       page: 1
     };
     this.refresh();
 
-    // quick and dirty solution
-    var interval = $interval(() => { this.refresh() }, 15*1000, 0, false);
-    $scope.$on('$destroy', () => { $interval.cancel(interval) });
-
-    // better solution uses actual websocket subscribe topcis.
-    // use these two!!
-    var TOPIC_BLOCK_POPPED = 'blockPoppedNew';
-    var TOPIC_BLOCK_PUSHED = 'blockPushedNew';
+    HTTPNotify.on(()=>{
+      if (this.query.page == 1) {
+        this.refresh();
+      }
+    },$scope);
   }
 
   getCount() : angular.IPromise<number> {
     var deferred = this.$q.defer();
-    this.engine.socket().api.getBlockchainStatus().then((status) => {
+    this.heat.api.getBlockchainStatus().then((status) => {
       deferred.resolve(status.numberOfBlocks);
     },deferred.reject);
     return deferred.promise;
@@ -134,8 +143,7 @@ class BlockExplorerTableComponent extends AbstractDataTableComponent {
 
   getPageItems(forceSort?: string, forcePage?: number, forceLimit?: number): angular.IPromise<Array<any>> {
     var deferred = this.$q.defer();
-    var request = this.createGetBlocksRequest(forceSort, forcePage, forceLimit);
-    this.engine.socket().api.getBlocks(request).then(
+    this.createGetBlocksRequest(forceSort, forcePage, forceLimit).then(
       (blocks) => {
         deferred.resolve(
           blocks.map((block) => {
@@ -148,16 +156,13 @@ class BlockExplorerTableComponent extends AbstractDataTableComponent {
     return deferred.promise;
   }
 
-  createGetBlocksRequest(forceSort?: string, forcePage?: number, forceLimit?: number): IGetBlocksRequest {
+  createGetBlocksRequest(forceSort?: string, forcePage?: number, forceLimit?: number): angular.IPromise<Array<IHeatBlock>> {
     var page = forcePage || this.query.page;
     var limit = forceLimit || this.query.limit;
 
     var from = (page-1) * limit;
     var to = from + limit;
 
-    return {
-      firstIndex: from,
-      lastIndex: to
-    }
+    return this.heat.api.getBlocks(from, to);
   }
 }

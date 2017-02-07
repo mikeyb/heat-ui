@@ -23,30 +23,11 @@
 declare var BigInteger;
 module utils {
 
-  export function convertNQT(amountNQT: string, decimals?: number) {
-    if (typeof amountNQT == 'undefined')  return '0';
-
-    var negative        = '',
-        decimals        = decimals || 8,
-        afterComma      = '',
-        amount          = new BigInteger(String(amountNQT)),
-        factor          = String(Math.pow(10, decimals)),
-        fractionalPart  = amount.mod(new BigInteger(factor)).toString();
-
-    amount = amount.divide(new BigInteger(factor));
-    if (amount.compareTo(BigInteger.ZERO) < 0) {
-      amount = amount.abs();
-      negative = '-';
-    }
-    if (fractionalPart && fractionalPart != "0") {
-      afterComma = '.';
-      for (var i=fractionalPart.length; i<decimals; i++) {
-        afterComma += '0';
-      }
-      afterComma += fractionalPart.replace(/0+$/, "");
-    }
-    amount = amount.toString();
-    return negative + amount + afterComma;
+  /**
+   * Remove commas notation from a float number
+   */
+  export function unformat(commaFormatted: string): string {
+    return commaFormatted ? commaFormatted.replace(/,/g,"") : "0";
   }
 
   export function commaFormat(amount) {
@@ -63,42 +44,6 @@ module utils {
       }
     }
     return (neg?'-':'')+format.join(',')+(amount.length==2?('.'+amount[1]):'');
-  }
-
-  export function convertToNQT(amountNXT: string, decimals: number = 8) {
-    if (typeof amountNXT == 'undefined') {
-      return '0';
-    }
-    amountNXT   = String(amountNXT).replace(/,/g,'');
-    var parts   = amountNXT.split(".");
-    var amount  = parts[0];
-    var fraction;
-    if (parts.length == 1) {
-      fraction = "00000000";
-    }
-    else if (parts.length == 2) {
-      if (parts[1].length <= decimals) {
-        fraction = parts[1];
-      }
-      else {
-        fraction = parts[1].substring(0, decimals);
-      }
-    }
-    else {
-      throw "Invalid input";
-    }
-    for (var i=fraction.length; i<decimals; i++) {
-      fraction += "0";
-    }
-    var result = amount + "" + fraction;
-    if (!/^\d+$/.test(result)) {
-      throw "Invalid input.";
-    }
-    result = result.replace(/^0+/, "");
-    if (result === "") {
-      result = "0";
-    }
-    return result;
   }
 
   export function isNumber(value: string) {
@@ -122,9 +67,11 @@ module utils {
    */
   export function hasToManyDecimals(value: string, decimals: number) {
     var num = String(value).replace(/,/g,'');
-    var parts = num.split(".");
-    if (parts[1] && parts[1].length > decimals) {
-      return true;
+    var parts: Array<string> = num.split(".");
+    if (parts[1]) {
+      var fractional = parts[1].replace(/[\s0]*$/g,"");
+      if (fractional.length > decimals)
+        return true;
     }
     return false;
   }
@@ -168,7 +115,21 @@ module utils {
     return deferred.promise;
   }
 
-  export function convertToQNTf(quantity: string, decimals: number): string {
+  export function formatQNT(quantity: string, decimals: number, returnNullZero?: boolean): string {
+    var asfloat = utils.convertToQNTf(quantity, decimals);
+    var cf = utils.commaFormat(asfloat);
+    var parts = cf.split('.');
+    var ret;
+    if (!parts[1])
+      ret = parts[0] + "." + "0".repeat(decimals);
+    else if (parts[1].length > decimals)
+      ret = parts[0] + "." + parts[1].substr(0, decimals);
+    else
+      ret = parts[0] + "." + parts[1] + "0".repeat(decimals-parts[1].length);
+    return returnNullZero && !ret.match(/[^0\.]/) ? null : ret;
+  }
+
+  export function convertToQNTf(quantity: string, decimals: number = 8): string {
     if (typeof quantity == 'undefined') {
       return '0';
     }
@@ -192,14 +153,8 @@ module utils {
     return quantity + afterComma;
   }
 
-  export function calculateOrderPricePerWholeQNT(price: string, decimals: number): string {
-    var orderPrice: jsbn.BigInteger = new BigInteger(String(price)).multiply(new BigInteger("" + Math.pow(10, decimals)));
-    return utils.convertNQT(orderPrice.toString(), 8);
-  }
-
-  export function calculateOrderTotalNQT(priceNQT: string, quantityQNT: string): string {
-    var orderTotal: jsbn.BigInteger = new BigInteger(String(quantityQNT)).multiply(new BigInteger(String(priceNQT)));
-    return orderTotal.toString();
+  export function calculateTotalOrderPriceQNT(quantityQNT: string, priceQNT: string): string {
+    return new Big(quantityQNT).times(new Big(priceQNT).div(new Big(100000000))).round().toString();
   }
 
   export class ConvertToQNTError implements Error  {
@@ -214,7 +169,7 @@ module utils {
    *
    * @throws utils.ConvertToQNTError
    */
-  export function convertToQNT(quantity: string, decimals: number): string {
+  export function convertToQNT(quantity: string, decimals: number = 8): string {
     var parts = quantity.split(".");
     var qnt   = parts[0];
     if (parts.length == 1) {
@@ -247,17 +202,6 @@ module utils {
     return qnt.replace(/^0+/, "");
   }
 
-  export function calculatePricePerWholeQNT(price: string, decimals: number): string {
-    if (decimals) {
-      var toRemove = price.slice(-decimals);
-      if (!/^[0]+$/.test(toRemove)) {
-        throw "Invalid input";
-      }
-      return price.slice(0, -decimals);
-    }
-    return price;
-  }
-
   /**
    * Count bytes in a string's UTF-8 representation.
    * @param   string
@@ -277,12 +221,6 @@ module utils {
     return byteLen;
   }
 
-  /* Prepares an RS account ID for display in Blocktech app when no suitable email address
-     for account is available. */
-  export function normalizeRsAccount(account: string) {
-    return account.trim().replace(/FIM-/,'').replace(/-/g,'').toLowerCase();
-  }
-
   export function debounce(func: Function, wait?: number, immediate?: boolean) {
     var timeout;
     return function() {
@@ -297,6 +235,15 @@ module utils {
       if (callNow) func.apply(context, args);
     };
   };
+
+  export function repeatWhile(delay: number, cb: ()=>boolean) {
+    var fn = () => {
+      if (cb()) {
+        clearInterval(interval);
+      }
+    }
+    var interval = setInterval(fn, delay);
+  }
 
   export function emptyToNull(input: string): string {
     return (angular.isString(input) && input.trim().length == 0) ? null : input;

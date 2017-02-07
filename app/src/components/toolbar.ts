@@ -22,7 +22,6 @@
  * */
 @Component({
   selector: 'toolbar',
-  inputs: ['@leftSidenavId', '@rightSidenavId'],
   styles: [`
   toolbar .admin-menu .md-button:not(.active) {
     background-color: #FFA726;
@@ -33,43 +32,189 @@
   }
   `],
   template: `
-    <md-toolbar>
+    <md-toolbar class="main-toolbar">
       <div class="md-toolbar-tools">
-        <md-button class="md-icon-button" ng-click="vm.leftSidenavToggle()" hide-gt-md ng-hide="!vm.user.unlocked" aria-label="Menu">
-          <md-icon md-font-library="material-icons">menu</md-icon>
+        <md-button aria-label="home" class="md-icon-button" href="#/home">
+          <md-tooltip md-direction="bottom">Home</md-tooltip>
+          <md-icon md-font-library="material-icons" ng-mouseover="alert('no')">home</md-icon>
         </md-button>
-        <application-title hide-gt-md></application-title>
-        <!--<user-balance ng-if="vm.user.unlocked && !vm.user.newAccount"></user-balance>-->
+        <md-button aria-label="send heat" class="md-icon-button" ng-click="vm.showSendmoneyDialog($event);" ng-if="vm.user.unlocked">
+          <md-tooltip md-direction="bottom">Send Heat</md-tooltip>
+          <md-icon md-font-library="material-icons">toll</md-icon>
+        </md-button>
+        <md-button aria-label="explorer" class="md-icon-button" href="#/explorer">
+          <md-tooltip md-direction="bottom">Blockchain explorer</md-tooltip>
+          <md-icon md-font-library="material-icons">explore</md-icon>
+        </md-button>
+        <md-button aria-label="messages" class="md-icon-button" href="#/messenger/0" ng-if="vm.user.unlocked">
+          <md-tooltip md-direction="bottom">Messages</md-tooltip>
+          <md-icon md-font-library="material-icons">message</md-icon>
+        </md-button>
+        <md-button aria-label="trader" class="md-icon-button" href="#/trader/5592059897546023466/0">
+          <md-tooltip md-direction="bottom">Exchange</md-tooltip>
+          <md-icon md-font-library="material-icons">insert_chart</md-icon>
+        </md-button>
+        <md-button aria-label="server" class="md-icon-button" href="#/server" ng-show="vm.isNodeEnv">
+          <md-tooltip md-direction="bottom">App Server</md-tooltip>
+          <md-icon md-font-library="material-icons">settings_applications</md-icon>
+        </md-button>
         <span flex></span>
-        <!--<application-system-time></application-system-time>-->
-        <md-button ng-if="vm.user.unlocked" aria-label="Sign off" ng-click="vm.user.lock()">Sign off</md-button>
-        <md-button class="md-icon-button" aria-label="Open Settings" ng-click="vm.rightSidenavToggle()">
-          <md-icon md-font-library="material-icons">more_vert</md-icon>
-        </md-button>
+        <h2 ng-if="vm.user.unlocked">
+          <user-balance></user-balance>
+        </h2>
+        <md-menu md-position-mode="target-right target" md-offset="34px 0px">
+          <md-button aria-label="signout" class="md-icon-button" ng-click="$mdOpenMenu($event)" md-menu-origin >
+            <md-icon md-font-library="material-icons">menu</md-icon>
+          </md-button>
+          <md-menu-content width="4">
+            <!--
+            <md-menu-item  ng-if="vm.user.unlocked">
+              <md-button aria-label="copy" ng-click="vm.copy('toolbar-account-id-target', 'Acount id copied')">
+                <md-icon md-font-library="material-icons">content_copy</md-icon>
+                <span id="toolbar-account-id-target">{{ vm.user.account }}</span>
+              </md-button>
+            </md-menu-item>
+            -->
+            <md-menu-item  ng-if="vm.user.unlocked">
+              <md-button aria-label="transfer asset" ng-click="vm.showAssetTransferDialog($event)">
+                <md-icon md-font-library="material-icons">swap_horiz</md-icon>
+                <span id="toolbar-account-id-target">Transfer Asset</span>
+              </md-button>
+            </md-menu-item>
+            <md-menu-item  ng-if="vm.user.unlocked">
+              <md-button aria-label="issue asset" ng-click="vm.showIssueAssetDialog($event)">
+                <md-icon md-font-library="material-icons">library_add</md-icon>
+                <span id="toolbar-account-id-target">Issue Asset</span>
+              </md-button>
+            </md-menu-item>
+            <md-menu-item  ng-if="vm.user.unlocked">
+              <md-button aria-label="whitelits market" ng-click="vm.showWhitelistMarketDialog($event)">
+                <md-icon md-font-library="material-icons">insert_chart</md-icon>
+                <span id="toolbar-account-id-target">Create Market</span>
+              </md-button>
+            </md-menu-item>
+            <md-menu-item ng-show="vm.isNodeEnv">
+              <md-button aria-label="dev-tools" ng-click="vm.opendevTools($event)">
+                <md-icon md-font-library="material-icons">developer_board</md-icon>
+                Developer tools
+              </md-button>
+            </md-menu-item>
+            <md-menu-item>
+              <md-button aria-label="about" ng-click="vm.about($event)">
+                <md-icon md-font-library="material-icons">info_outline</md-icon>
+                About HEAT
+              </md-button>
+            </md-menu-item>
+            <md-menu-item>
+              <md-button aria-label="about" href="https://heatwallet.com/api" target="_blank">
+                <md-icon md-font-library="material-icons">find_in_page</md-icon>
+                Heat API (external)
+              </md-button>
+            </md-menu-item>
+            <md-menu-item  ng-if="vm.user.unlocked">
+              <md-button aria-label="signout" ng-click="vm.signout()">
+                <md-icon md-font-library="material-icons">close</md-icon>
+                Sign out
+              </md-button>
+            </md-menu-item>
+            <md-menu-item  ng-if="!vm.user.unlocked">
+              <md-button aria-label="signin" href="#/login">
+                <md-icon md-font-library="material-icons">lock_open</md-icon>
+                Sign in
+              </md-button>
+            </md-menu-item>
+          </md-menu-content>
+        </md-menu>
       </div>
-    </md-toolbar>`
+    </md-toolbar>
+  `
 })
-@Inject('$scope','$mdSidenav','user','sendmoney')
+@Inject('$scope','$mdSidenav','user','sendmoney','electron','env','$timeout','clipboard','assetTransfer',
+  'assetIssue','whitelistMarket','storage','HTTPNotify')
 class ToolbarComponent {
+
+  isNodeEnv = false;
 
   constructor(private $scope: angular.IScope,
               private $mdSidenav,
               public user: UserService,
-              private sendmoney: SendmoneyService) {
-  }
-
-  leftSidenavId: string;
-  rightSidenavId: string;
-
-  leftSidenavToggle() {
-    this.$mdSidenav(this.leftSidenavId).toggle();
-  }
-
-  rightSidenavToggle() {
-    this.$mdSidenav(this.rightSidenavId).toggle();
+              private sendmoney: SendmoneyService,
+              private electron: ElectronService,
+              public env: EnvService,
+              $timeout: angular.ITimeoutService,
+              private clipboard: ClipboardService,
+              private assetTransfer: AssetTransferService,
+              private assetIssue: AssetIssueService,
+              private whitelistMarket: WhitelistMarketService,
+              private storage: StorageService,
+              private HTTPNotify: HTTPNotifyService) {
+    this.isNodeEnv=env.type==EnvType.NODEJS;
   }
 
   showSendmoneyDialog($event) {
     this.sendmoney.dialog($event).show();
+  }
+
+  showAssetTransferDialog($event) {
+    this.assetTransfer.dialog($event).show();
+  }
+
+  showIssueAssetDialog($event) {
+    this.assetIssue.dialog($event).show();
+  }
+
+  showWhitelistMarketDialog($event) {
+    var dialog = <WhitelistMarketferDialog>this.whitelistMarket.dialog($event);
+    dialog.show().then(()=> {
+
+      /* PATCHUP IN AWAITING OF SERVER FUNCTIONALITY - also cleanup trader-markets.ts */
+
+      var currency = dialog.fields['currency'].value;
+      var asset = dialog.fields['asset'].value;
+      var currencyAvailableAssets = <Array<DialogFieldAssetAssetInfo>>dialog.fields['currency']['availableAssets'];
+      var assetAvailableAssets = <Array<DialogFieldAssetAssetInfo>>dialog.fields['asset']['availableAssets'];
+      var currencySymbol, assetSymbol;
+
+      for (var i=0;i<currencyAvailableAssets.length;i++) {
+        var available = currencyAvailableAssets[i];
+        if (available.id == currency) {
+          currencySymbol = available.symbol;
+          break;
+        }
+      }
+      for (var i=0;i<assetAvailableAssets.length;i++) {
+        var available = assetAvailableAssets[i];
+        if (available.id == asset) {
+          assetSymbol = available.symbol;
+          break;
+        }
+      }
+      var mymarkets = this.storage.namespace('trader').get('my-markets');
+      if (!mymarkets) {
+        mymarkets = [];
+      }
+      mymarkets.push({
+        currency:{id: currency,symbol: currencySymbol},
+        asset:{id:asset,symbol: assetSymbol}
+      });
+      this.storage.namespace('trader').put('my-markets', mymarkets);
+      this.HTTPNotify.notify();
+    });
+  }
+
+  signout() {
+    this.user.lock();
+  }
+
+  about($event) {
+    dialogs.about($event);
+  }
+
+  opendevTools() {
+    this.electron.openDevTools(OpenDevToolsMode.detach);
+  }
+
+  copy(element: string, successMsg: string) {
+    this.clipboard.copyWithUI(document.getElementById(element), successMsg);
   }
 }
